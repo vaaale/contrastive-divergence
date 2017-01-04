@@ -1,9 +1,8 @@
-import numpy as np
 import pickle
 from keras.engine import Input
 from keras.layers import Dense
 from keras.models import Model
-
+import matplotlib.pyplot as plt
 
 def build_model():
     input = Input(shape=(2000,))
@@ -46,4 +45,7 @@ def finetune(x_data):
 
 
 
+plt.figure()
+plt.scatter(encoded_txts[:500,0], encoded_txts[:500,1], c=colorlist[:500])
+plt.show()
 
