@@ -45,7 +45,7 @@ def finetune(x_data):
 
 
 
-plt.figure()
-plt.scatter(encoded_txts[:500,0], encoded_txts[:500,1], c=colorlist[:500])
-plt.show()
+# plt.figure()
+# plt.scatter(encoded_txts[:500,0], encoded_txts[:500,1], c=colorlist[:500])
+# plt.show()
 

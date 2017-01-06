@@ -14,8 +14,7 @@ def pretrain(x_train):
         'finalmomentum': 0.9,
         'maxepoch': 10
     }
-    restart = 1
-    model, batchdata = RBM(x_train, 500, params)
+    model, batchdata = RBM(x_train, 1000, params)
     pickle.dump(model, open('models/layer1.pkl', 'wb'))
 
     model, batchdata = RBM(batchdata, 250, params)

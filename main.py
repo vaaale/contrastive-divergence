@@ -4,11 +4,11 @@ from finetune import finetune
 
 batch_size = 100
 
-x_train = news20(batch_size)
+x_train = mnist_data(batch_size)
 
 pretrain(x_train)
 
-finetune(x_train)
+#finetune(x_train)
 
 
 

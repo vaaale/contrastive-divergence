@@ -3,6 +3,9 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 from keras.datasets import mnist
+from sklearn.datasets import load_digits
+
+from display import display
 
 
 def news20(batch_size):
@@ -24,11 +27,18 @@ def news20(batch_size):
 
 
 def mnist_data(batch_size):
+    num_dim = 784
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
+
+    num_cases = len(X_train)
+    num_batches = num_cases / batch_size
+    X_train = X_train.reshape(num_cases, num_dim)
+
     X_train = X_train.astype('float32')
     X_train /= 255
-    dim = X_train.shape
-    numbatches = dim[0] // batch_size
-    X_train = X_train.reshape((batch_size, dim[1]*dim[2], numbatches))
-    print(X_train.shape)
-    return X_train
+
+    batchdata = [X_train[b*batch_size:b*batch_size+batch_size] for b in np.arange(num_batches)]
+
+    display(batchdata[0].reshape(100, 28,28), batchdata[2].reshape(100, 28,28))
+
+    return batchdata

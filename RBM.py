@@ -1,5 +1,7 @@
 import numpy as np
 
+from display import display
+
 
 def RBM(batchdata, numhid, params):
     type = params['type']
@@ -13,58 +15,56 @@ def RBM(batchdata, numhid, params):
     finalmomentum = params['finalmomentum']
     maxepoch = params['maxepoch']
 
-    numcases, numdims, numbatches = batchdata.shape
+    numbatches = len(batchdata)
+    numcases, numdims = batchdata[0].shape
 
-    restart = 1
-    # Initializing symmetric weights and biases
-    if restart == 1:
-        print('Initializing RBM: {}'.format(numhid))
-        restart = 0
+    print('Initializing RBM: {}'.format(numhid))
+    # Initializing symmetric weights and biases.
+    vishid = 0.1*np.random.randn(numdims, numhid)
+    hidbiases = np.zeros((1, numhid))
+    visbiases = np.zeros((1, numdims))
 
-        # Initializing symmetric weights and biases.
-        vishid = 0.1 * np.random.randn(numdims, numhid)
-        hidbiases = np.zeros((1, numhid))
-        visbiases = np.zeros((1, numdims))
-
-        poshidprobs = np.zeros((numcases, numhid))
-        neghidprobs = np.zeros((numcases, numhid))
-        posprods = np.zeros((numdims, numhid))
-        negprods = np.zeros((numdims, numhid))
-        vishidinc = np.zeros((numdims, numhid))
-        hidbiasinc = np.zeros((1, numhid))
-        visbiasinc = np.zeros((1, numdims))
-        batchposhidprobs = np.zeros((numcases, numhid, numbatches))
+    vishidinc = np.zeros((numdims, numhid))
+    hidbiasinc = np.zeros((1, numhid))
+    visbiasinc = np.zeros((1, numdims))
+    batchposhidprobs = np.zeros((numcases, numhid, numbatches))
 
     for epoch in range(maxepoch):
         print('Epoch {}'.format(epoch))
         errsum = 0
         for batch in range(numbatches):
             # Positive phase
-            data = batchdata[:, :, batch]
+            #data = batchdata[:, :, batch]
+            data = batchdata[batch]
             if type == 'sigmoid':
-                poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - np.matlib.repmat(hidbiases, numcases, 1)))
+                poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - hidbiases))
             else:
-                poshidprobs = np.dot(data, vishid) + np.matlib.repmat(hidbiases, numcases, 1)
+                poshidprobs = np.dot(data, vishid) + hidbiases
 
             if epoch == maxepoch-1:
                 batchposhidprobs[:, :, batch] = poshidprobs
-            posprods = np.dot(data.T, poshidprobs)
-            poshidact = np.sum(poshidprobs)
-            posvisact = np.sum(data)
-            # end of positive phase
-            poshidstates = poshidprobs > np.random.rand(numcases, numhid)
-            # negative phase
-            negdata = 1 / (1 + np.exp(-np.dot(poshidstates, vishid.T) - np.matlib.repmat(visbiases, numcases, 1)))
-            if type == 'sigmoid':
-                neghidprobs = 1 / (1 + np.exp(-np.dot(negdata, vishid) - np.matlib.repmat(hidbiases, numcases, 1)))
-            else:
-                neghidprobs = np.dot(negdata, vishid) + np.matlib.repmat(hidbiases, numcases, 1)
+            posprods = np.dot(np.transpose(data), poshidprobs)
+            poshidact = np.sum(poshidprobs, axis=0)
+            posvisact = np.sum(data, axis=0)
 
-            negprods = np.dot(negdata.T, neghidprobs)
-            neghidact = np.sum(neghidprobs)
-            negvisact = np.sum(negdata)
+            # end of positive phase
+
+            poshidstates = np.asarray(poshidprobs > np.random.rand(numcases, numhid), dtype='float32')
+
+            # negative phase
+
+            negdata = 1 / (1 + np.exp(-np.dot(poshidstates, vishid.T) - visbiases))
+            if type == 'sigmoid':
+                neghidprobs = 1 / (1 + np.exp(-np.dot(negdata, vishid) - hidbiases))
+            else:
+                neghidprobs = np.dot(negdata, vishid) + hidbiases
+
+            negprods = np.dot(np.transpose(negdata), neghidprobs)
+            neghidact = np.sum(neghidprobs, axis=0)
+            negvisact = np.sum(negdata, axis=0)
             # end of negative phase
-            err = np.sum((data - negdata) ** 2)
+            diff = data - negdata
+            err = np.sum(np.square(diff))
             errsum = err + errsum
 
             if epoch > 5:
@@ -76,9 +76,13 @@ def RBM(batchdata, numhid, params):
             vishidinc = momentum * vishidinc + epsilonw * ((posprods - negprods) / numcases - weightcost * vishid)
             visbiasinc = momentum * visbiasinc + (epsilonvb / numcases) * (posvisact - negvisact)
             hidbiasinc = momentum * hidbiasinc + (epsilonhb / numcases) * (poshidact - neghidact)
-            vishid = vishid + vishidinc
-            visbiases = visbiases + visbiasinc
-            hidbiases = hidbiases + hidbiasinc
+            vishid += vishidinc
+            visbiases += visbiasinc
+            hidbiases += hidbiasinc
+
+            # if batch % 100 == 0:
+            #     display(data.reshape(100, 28,28), negdata.reshape(100, 28,28))
+
 
             # end of updates
         print('Epoch: {}, error: {}'.format(epoch, errsum))
