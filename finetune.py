@@ -6,20 +6,27 @@ from keras.layers import Dense
 from keras.models import Model
 import numpy as np
 
+from display import display
+
 
 def build_model(numdim):
     input = Input(shape=(numdim,))
     x = Dense(1000, activation='sigmoid')(input)
+    x = Dense(500, activation='sigmoid')(x)
     x = Dense(250, activation='sigmoid')(x)
     encoded = Dense(2, activation='linear')(x)
-    y = Dense(250, activation='sigmoid')(encoded)
+    y = Dense(500, activation='sigmoid')(encoded)
+    y = Dense(250, activation='sigmoid')(y)
     y = Dense(1000, activation='sigmoid')(y)
     decoded = Dense(numdim, activation='sigmoid')(y)
 
     autoencoder = Model(input=input, output=decoded)
-    autoencoder.compile(optimizer='rmsprop', loss='binary_crossentropy')
+    autoencoder.compile(optimizer='rmsprop', loss='mse')
 
-    return autoencoder
+    encoder = Model(input=input, output=encoded)
+    encoder.compile(optimizer='rmsprop', loss='mse')
+
+    return autoencoder, encoder
 
 
 def finetune(x_data):
@@ -28,14 +35,17 @@ def finetune(x_data):
     layer1 = pickle.load(open('models/layer1.pkl', 'rb'))
     layer2 = pickle.load(open('models/layer2.pkl', 'rb'))
     layer3 = pickle.load(open('models/layer3.pkl', 'rb'))
+    layer4 = pickle.load(open('models/layer4.pkl', 'rb'))
 
-    model = build_model(numdim)
+    model, encoder = build_model(numdim)
 
 
     weights = [
         layer1['vishid'], layer1['hidbiases'].reshape(layer1['hidbiases'].shape[1]),
         layer2['vishid'], layer2['hidbiases'].reshape(layer2['hidbiases'].shape[1]),
         layer3['vishid'], layer3['hidbiases'].reshape(layer3['hidbiases'].shape[1]),
+        layer4['vishid'], layer4['hidbiases'].reshape(layer4['hidbiases'].shape[1]),
+        layer4['vishid'].T, layer4['visbiases'].reshape(layer4['visbiases'].shape[1]),
         layer3['vishid'].T, layer3['visbiases'].reshape(layer3['visbiases'].shape[1]),
         layer2['vishid'].T, layer2['visbiases'].reshape(layer2['visbiases'].shape[1]),
         layer1['vishid'].T, layer1['visbiases'].reshape(layer1['visbiases'].shape[1])
@@ -45,8 +55,13 @@ def finetune(x_data):
 
     checkpoint = ModelCheckpoint('models/final-model.hdf5', monitor='loss', save_best_only=True,
                                  mode='min', save_weights_only=True, verbose=1)
-    history = model.fit(x_data, x_data, batch_size=100, nb_epoch=200, verbose=1, callbacks=[checkpoint])
+    history = model.fit(x_data, x_data, batch_size=100, nb_epoch=5, shuffle=True, verbose=1, callbacks=[checkpoint])
 
+
+    batch = x_data[0:100]
+    predictions = model.predict(batch)
+
+    display(x_data[0:10].reshape(10,28,28), predictions[0:10].reshape(10,28,28))
 
 
 # plt.figure()

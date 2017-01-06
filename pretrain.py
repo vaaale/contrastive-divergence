@@ -17,8 +17,11 @@ def pretrain(x_train):
     model, batchdata = RBM(x_train, 1000, params)
     pickle.dump(model, open('models/layer1.pkl', 'wb'))
 
-    model, batchdata = RBM(batchdata, 250, params)
+    model, batchdata = RBM(batchdata, 500, params)
     pickle.dump(model, open('models/layer2.pkl', 'wb'))
+
+    model, batchdata = RBM(batchdata, 250, params)
+    pickle.dump(model, open('models/layer3.pkl', 'wb'))
 
     params = {
         'type': 'linear',
@@ -31,6 +34,6 @@ def pretrain(x_train):
         'maxepoch': 10
     }
     model, batchdata = RBM(batchdata, 2, params)
-    pickle.dump(model, open('models/layer3.pkl', 'wb'))
+    pickle.dump(model, open('models/layer4.pkl', 'wb'))
 
 

@@ -4,11 +4,10 @@ from finetune import finetune
 
 batch_size = 100
 
-x_train = mnist_batches(batch_size)
+# x_train = mnist_batches(batch_size)
+# pretrain(x_train)
 
-pretrain(x_train)
-
-x_train = mnist_data(batch_size)
+x_train, _ = mnist_data()
 finetune(x_train)
 
 
