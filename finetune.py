@@ -1,4 +1,6 @@
 import pickle
+
+from keras.callbacks import ModelCheckpoint
 from keras.engine import Input
 from keras.layers import Dense
 from keras.models import Model
@@ -41,7 +43,9 @@ def finetune(x_data):
 
     model.set_weights(weights=weights)
 
-    history = model.fit(x_data, x_data, batch_size=100, nb_epoch=200, verbose=1)
+    checkpoint = ModelCheckpoint('models/final-model.hdf5', monitor='loss', save_best_only=True,
+                                 mode='min', save_weights_only=True, verbose=1)
+    history = model.fit(x_data, x_data, batch_size=100, nb_epoch=200, verbose=1, callbacks=[checkpoint])
 
 
 
