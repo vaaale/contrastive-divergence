@@ -2,16 +2,17 @@ import pickle
 from keras.engine import Input
 from keras.layers import Dense
 from keras.models import Model
-import matplotlib.pyplot as plt
+import numpy as np
 
-def build_model():
-    input = Input(shape=(2000,))
-    x = Dense(500, activation='sigmoid')(input)
+
+def build_model(numdim):
+    input = Input(shape=(numdim,))
+    x = Dense(1000, activation='sigmoid')(input)
     x = Dense(250, activation='sigmoid')(x)
     encoded = Dense(2, activation='linear')(x)
     y = Dense(250, activation='sigmoid')(encoded)
-    y = Dense(500, activation='sigmoid')(y)
-    decoded = Dense(2000, activation='sigmoid')(y)
+    y = Dense(1000, activation='sigmoid')(y)
+    decoded = Dense(numdim, activation='sigmoid')(y)
 
     autoencoder = Model(input=input, output=decoded)
     autoencoder.compile(optimizer='rmsprop', loss='binary_crossentropy')
@@ -20,14 +21,13 @@ def build_model():
 
 
 def finetune(x_data):
-    batch_size, dim, num_batches = x_data.shape
-    x_data = x_data.reshape(batch_size*num_batches, dim)
-    print(x_data.shape)
+    numdim = x_data[0].shape[0]
+
     layer1 = pickle.load(open('models/layer1.pkl', 'rb'))
     layer2 = pickle.load(open('models/layer2.pkl', 'rb'))
     layer3 = pickle.load(open('models/layer3.pkl', 'rb'))
 
-    model = build_model()
+    model = build_model(numdim)
 
 
     weights = [

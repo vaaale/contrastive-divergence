@@ -27,7 +27,7 @@ def RBM(batchdata, numhid, params):
     vishidinc = np.zeros((numdims, numhid))
     hidbiasinc = np.zeros((1, numhid))
     visbiasinc = np.zeros((1, numdims))
-    batchposhidprobs = np.zeros((numcases, numhid, numbatches))
+    batchposhidprobs = []
 
     for epoch in range(maxepoch):
         print('Epoch {}'.format(epoch))
@@ -42,7 +42,7 @@ def RBM(batchdata, numhid, params):
                 poshidprobs = np.dot(data, vishid) + hidbiases
 
             if epoch == maxepoch-1:
-                batchposhidprobs[:, :, batch] = poshidprobs
+                batchposhidprobs.append(poshidprobs)
             posprods = np.dot(np.transpose(data), poshidprobs)
             poshidact = np.sum(poshidprobs, axis=0)
             posvisact = np.sum(data, axis=0)
@@ -87,6 +87,10 @@ def RBM(batchdata, numhid, params):
             # end of updates
         print('Epoch: {}, error: {}'.format(epoch, errsum))
 
+    print('Model shapes:')
+    print(vishid.shape)
+    print(visbiases.shape)
+    print(hidbiases.shape)
     model = {
         'vishid': vishid,
         'visbiases': visbiases,
