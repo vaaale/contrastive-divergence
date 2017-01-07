@@ -1,7 +1,8 @@
+import matplotlib.pyplot as plt
 from dataset import mnist_data
 from display import display
-from finetune import build_mnist_model
-import matplotlib.pyplot as plt
+
+from news20.finetune import build_mnist_model
 
 data, labels = mnist_data()
 numdim = data[0].shape[0]

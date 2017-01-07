@@ -1,10 +1,7 @@
 import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
 
-from dataset import news20_data
-from finetune import build_news20_model
-import numpy as np
-
+from news20.dataset import news20_data
+from news20.finetune import build_news20_model
 
 data, labels = news20_data()
 numdim = data[0].shape[0]

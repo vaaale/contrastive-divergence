@@ -1,7 +1,5 @@
 import numpy as np
 
-from display import display
-
 
 def RBM(batchdata, numhid, params):
     type = params['type']
