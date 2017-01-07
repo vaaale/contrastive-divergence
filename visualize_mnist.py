@@ -1,16 +1,16 @@
 from dataset import mnist_data
 from display import display
-from finetune import build_model
+from finetune import build_mnist_model
 import matplotlib.pyplot as plt
 
 data, labels = mnist_data()
 numdim = data[0].shape[0]
 
-autoencoder, encoder = build_model(numdim)
+autoencoder, encoder = build_mnist_model(numdim)
 
-autoencoder.load_weights('models/final-model.hdf5')
+autoencoder.load_weights('models/mnist/final-model.hdf5')
 
-n = 5000
+n = 10000
 batch = data[0:n]
 y = labels[0:n]
 
@@ -21,5 +21,6 @@ display(batch[0:10].reshape(10, 28, 28), reconstructions[0:10].reshape(10, 28, 2
 
 
 plt.figure()
+plt.jet()
 plt.scatter(encoded[:,0], encoded[:,1], c=y)
 plt.show()

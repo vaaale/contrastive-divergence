@@ -1,6 +1,13 @@
 import numpy as np
 
-from display import display
+import pycuda.autoinit
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
+
+import skcuda.linalg as culinalg
+import skcuda.misc as cumisc
+
+culinalg.init()
 
 
 def RBM(batchdata, numhid, params):
@@ -21,7 +28,7 @@ def RBM(batchdata, numhid, params):
 
     print('Initializing RBM: {}'.format(numhid))
     # Initializing symmetric weights and biases.
-    vishid = 0.1*np.random.randn(numdims, numhid)
+    vishid = 0.1 * np.random.randn(numdims, numhid)
     hidbiases = np.zeros((1, numhid))
     visbiases = np.zeros((1, numdims))
 
@@ -41,7 +48,7 @@ def RBM(batchdata, numhid, params):
             else:
                 poshidprobs = np.dot(data, vishid) + hidbiases
 
-            if epoch == maxepoch-1:
+            if epoch == maxepoch - 1:
                 batchposhidprobs.append(poshidprobs)
             posprods = np.dot(np.transpose(data), poshidprobs)
             poshidact = np.sum(poshidprobs, axis=0)
