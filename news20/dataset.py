@@ -7,30 +7,37 @@ from nltk import stem
 from nltk.corpus import stopwords
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import normalize
+
+
+def build_dataset():
+    newsgroups_train = fetch_20newsgroups(subset='train', remove=('headers', 'footers', 'quotes'))
+
+    texts = newsgroups_train.data
+    labels = newsgroups_train.target
+    print(len(texts))
+
+    stemmer = stem.snowball.EnglishStemmer()
+
+    texts = [' '.join([stemmer.stem(w) for w in text_to_word_sequence(sent)]) for sent in texts]
+    vectorizer = CountVectorizer(stop_words=stopwords.words('english'), max_features=2000)
+    x_train = vectorizer.fit_transform(texts)
+
+    x_train = x_train.toarray()
+    x_train = x_train.astype('float32')
+
+    x_train = normalize(x_train, axis=1, norm='l2')
+
+    return x_train, labels
 
 
 def news20_minibatches(batch_size):
-    newsgroups_train = fetch_20newsgroups(subset='train', remove=('headers', 'footers', 'quotes'))
-
-    if not os.path.isfile('data/news20.pkl'):
-        texts = newsgroups_train.data
-        labels = newsgroups_train.target
-        print(len(texts))
-
-        stemmer = stem.snowball.EnglishStemmer()
-
-        data = [' '.join([stemmer.stem(w) for w in text_to_word_sequence(sent)]) for sent in texts]
-
-        vectorizer = CountVectorizer(stop_words=stopwords.words('english'), max_features=2000)
-        x_train = vectorizer.fit_transform(data)
-
-        x_train = x_train.toarray()
-        x_train = x_train.astype('float32')
-        x_train /= 255
+    if not os.path.isfile('news20/data/news20.pkl'):
+        x_train, labels = build_dataset()
         dataset = {'data': x_train, 'labels': labels}
-        pickle.dump(dataset, open('data/news20.pkl', 'wb'))
+        pickle.dump(dataset, open('news20/data/news20.pkl', 'wb'))
     else:
-        dataset = pickle.load(open('data/news20.pkl', 'rb'))
+        dataset = pickle.load(open('news20/data/news20.pkl', 'rb'))
 
     x_train = dataset['data']
     num_batches = int(len(x_train) / batch_size)
@@ -40,27 +47,12 @@ def news20_minibatches(batch_size):
 
 
 def news20_data():
-    newsgroups_train = fetch_20newsgroups(subset='train', remove=('headers', 'footers', 'quotes'))
-
-    if not os.path.isfile('data/news20.pkl'):
-        texts = newsgroups_train.data
-        labels = newsgroups_train.target
-        print(len(texts))
-
-        stemmer = stem.snowball.EnglishStemmer()
-
-        data = [' '.join([stemmer.stem(w) for w in text_to_word_sequence(sent)]) for sent in texts]
-
-        vectorizer = CountVectorizer(stop_words=stopwords.words('english'), max_features=2000)
-        x_train = vectorizer.fit_transform(data)
-
-        x_train = x_train.toarray()
-        x_train = x_train.astype('float32')
-        x_train /= 255
+    if not os.path.isfile('news20/data/news20.pkl'):
+        x_train, labels = build_dataset()
         dataset = {'data': x_train, 'labels': labels}
-        pickle.dump(dataset, open('data/news20.pkl', 'wb'))
+        pickle.dump(dataset, open('news20/data/news20.pkl', 'wb'))
     else:
-        dataset = pickle.load(open('data/news20.pkl', 'rb'))
+        dataset = pickle.load(open('news20/data/news20.pkl', 'rb'))
 
     return dataset['data'], dataset['labels']
 

@@ -2,7 +2,7 @@ import pickle
 
 from keras.callbacks import ModelCheckpoint
 from keras.engine import Input
-from keras.layers import Dense
+from keras.layers import Dense, GaussianNoise
 from keras.models import Model
 
 from news20.dataset import news20_data
@@ -10,13 +10,14 @@ from news20.dataset import news20_data
 
 def build_news20_model(numdim):
     input = Input(shape=(numdim,))
-    x = Dense(1000, activation='sigmoid')(input)
-    x = Dense(500, activation='sigmoid')(x)
+    x = Dense(500, activation='sigmoid')(input)
     x = Dense(250, activation='sigmoid')(x)
+    x = Dense(125, activation='sigmoid')(x)
+    #x = GaussianNoise(1)(x)
     encoded = Dense(2, activation='linear')(x)
-    y = Dense(500, activation='sigmoid')(encoded)
+    y = Dense(125, activation='sigmoid')(encoded)
     y = Dense(250, activation='sigmoid')(y)
-    y = Dense(1000, activation='sigmoid')(y)
+    y = Dense(500, activation='sigmoid')(y)
     decoded = Dense(numdim, activation='sigmoid')(y)
 
     autoencoder = Model(input=input, output=decoded)
@@ -57,5 +58,5 @@ def finetune_news20(x_data, model_path):
 
 
 if __name__ == '__main__':
-    x_train, _ = news20_data()
-    finetune_news20(x_train, 'news20/models')
+    x_train, labels = news20_data()
+    finetune_news20(x_train, 'models')

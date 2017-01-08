@@ -12,25 +12,25 @@ def pretrain_news20(x_train, model_path):
         'weightcost': 0.0002,
         'initialmomentum': 0.5,
         'finalmomentum': 0.9,
-        'maxepoch': 20
+        'maxepoch': 50
     }
-    model, batchdata = RBM(x_train, 1000, params)
+    model, batchdata = RBM(x_train, 500, params)
     pickle.dump(model, open(model_path + '/layer1.pkl', 'wb'))
+
+    model, batchdata = RBM(batchdata, 250, params)
+    pickle.dump(model, open(model_path + '/layer2.pkl', 'wb'))
 
     params = {
         'type': 'sigmoid',
-        'epsilonw': 0.1,
-        'epsilonvb': 0.1,
-        'epsilonhb': 0.1,
+        'epsilonw': 0.01,
+        'epsilonvb': 0.01,
+        'epsilonhb': 0.01,
         'weightcost': 0.0002,
         'initialmomentum': 0.5,
         'finalmomentum': 0.9,
-        'maxepoch': 40
+        'maxepoch': 100
     }
-    model, batchdata = RBM(batchdata, 500, params)
-    pickle.dump(model, open(model_path + '/layer2.pkl', 'wb'))
-
-    model, batchdata = RBM(batchdata, 250, params)
+    model, batchdata = RBM(batchdata, 125, params)
     pickle.dump(model, open(model_path + '/layer3.pkl', 'wb'))
 
     params = {
