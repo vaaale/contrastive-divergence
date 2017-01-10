@@ -1,13 +1,37 @@
 import numpy as np
-
 import pycuda.autoinit
-import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
-
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
+import time
+import pycuda.driver as drv
+from pycuda.compiler import SourceModule
+from pycuda.elementwise import ElementwiseKernel
+from pycuda.curandom import rand as curand
 
 culinalg.init()
+functions = SourceModule("""
+#include <math.h>
+  __global__ void sigmoid(float *dest, float *a)
+  {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    dest[idx] =  1 / (1+exp(-1 * a[idx]));
+  }
+
+  __global__ void stochastic_gt(float *dest, float *a, float *b)
+  {
+    c[i] = a[i] > b b[i] ? 1.0 : 0.0;
+  }
+
+  """)
+f_sigmoid = functions.get_function("sigmoid")
+f_stoch_gt = functions.get_function("stochastic_gt")
+
+def sigmoid(a):
+    dim = a.shape
+    dest = np.zeros_like(a)
+    f_sigmoid(drv.Out(dest), drv.In(a), block=(1024, 1, 1), grid=(int(dim[0] * dim[1] / 1024) + 1, 1, 1))
+    return
 
 
 def RBM(batchdata, numhid, params):
@@ -32,18 +56,25 @@ def RBM(batchdata, numhid, params):
     hidbiases = np.zeros((1, numhid))
     visbiases = np.zeros((1, numdims))
 
-    vishidinc = np.zeros((numdims, numhid))
-    hidbiasinc = np.zeros((1, numhid))
-    visbiasinc = np.zeros((1, numdims))
+    vishid_gpu = gpuarray.to_gpu(vishid)
+    hidbiases_gpu = gpuarray.to_gpu(hidbiases)
+    visbiases_gpu = gpuarray.to_gpu(visbiases)
+
+    # vishidinc = np.zeros((numdims, numhid))
+    # hidbiasinc = np.zeros((1, numhid))
+    # visbiasinc = np.zeros((1, numdims))
     batchposhidprobs = []
+
+    batchdata_gpu = gpuarray.to_gpu(batchdata)
 
     for epoch in range(maxepoch):
         print('Epoch {}'.format(epoch))
         errsum = 0
         for batch in range(numbatches):
             # Positive phase
-            data = batchdata[batch]
+            data = batchdata_gpu[batch]
             if type == 'sigmoid':
+                #poshidprobs_gpu =
                 poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - hidbiases))
             else:
                 poshidprobs = np.dot(data, vishid) + hidbiases

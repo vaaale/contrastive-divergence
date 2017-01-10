@@ -11,7 +11,7 @@ from sklearn.preprocessing import normalize
 
 
 def build_dataset():
-    newsgroups_train = fetch_20newsgroups(subset='train', remove=('headers', 'footers', 'quotes'))
+    newsgroups_train = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
 
     texts = newsgroups_train.data
     labels = newsgroups_train.target
