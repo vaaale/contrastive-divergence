@@ -15,8 +15,8 @@ def build_mnist_model(numdim):
     x = Dense(500, activation='sigmoid')(x)
     x = Dense(250, activation='sigmoid')(x)
     encoded = Dense(2, activation='linear')(x)
-    y = Dense(500, activation='sigmoid')(encoded)
-    y = Dense(250, activation='sigmoid')(y)
+    y = Dense(250, activation='sigmoid')(encoded)
+    y = Dense(500, activation='sigmoid')(y)
     y = Dense(1000, activation='sigmoid')(y)
     decoded = Dense(numdim, activation='sigmoid')(y)
 
