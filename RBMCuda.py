@@ -30,8 +30,9 @@ f_stoch_gt = functions.get_function("stochastic_gt")
 def sigmoid(a):
     dim = a.shape
     dest = np.zeros_like(a)
-    f_sigmoid(drv.Out(dest), drv.In(a), block=(1024, 1, 1), grid=(int(dim[0] * dim[1] / 1024) + 1, 1, 1))
-    return
+    dest_gpu = gpuarray.to_gpu(dest)
+    f_sigmoid(dest_gpu, drv.In(a), block=(1024, 1, 1), grid=(int(dim[0] * dim[1] / 1024) + 1, 1, 1))
+    return dest_gpu
 
 
 def RBM(batchdata, numhid, params):
@@ -74,16 +75,16 @@ def RBM(batchdata, numhid, params):
             # Positive phase
             data = batchdata_gpu[batch]
             if type == 'sigmoid':
-                #poshidprobs_gpu =
-                poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - hidbiases))
+                poshidprobs_gpu = sigmoid(cumisc.subtract(culinalg.dot(data, vishid_gpu), hidbiases_gpu))
+                #poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - hidbiases))
             else:
-                poshidprobs = np.dot(data, vishid) + hidbiases
+                poshidprobs_gpu = cumisc.add(culinalg.dot(data, vishid_gpu), hidbiases)
 
-            if epoch == maxepoch - 1:
-                batchposhidprobs.append(poshidprobs)
-            posprods = np.dot(np.transpose(data), poshidprobs)
-            poshidact = np.sum(poshidprobs, axis=0)
-            posvisact = np.sum(data, axis=0)
+            # if epoch == maxepoch - 1:
+            #     batchposhidprobs.append(poshidprobs)
+            posprods_gpu = culinalg.dot(culinalg.transpose(data), poshidprobs_gpu)
+            poshidact_gpu = cumisc.sum(poshidprobs_gpu, axis=0)
+            posvisact_gpu = cumisc.sum(data, axis=0)
 
             # end of positive phase
 
