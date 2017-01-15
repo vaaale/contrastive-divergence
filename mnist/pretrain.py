@@ -1,6 +1,9 @@
 import pickle
 
-from RBM import RBM
+#from RBM import RBM
+import pycuda.autoinit
+
+from RBMCuda import RBM
 
 
 def pretrain_mnist(x_train, model_path):
@@ -12,7 +15,7 @@ def pretrain_mnist(x_train, model_path):
         'weightcost': 0.0002,
         'initialmomentum': 0.5,
         'finalmomentum': 0.9,
-        'maxepoch': 10
+        'maxepoch': 1
     }
     model, batchdata = RBM(x_train, 1000, params)
     pickle.dump(model, open(model_path + '/layer1.pkl', 'wb'))
@@ -32,7 +35,9 @@ def pretrain_mnist(x_train, model_path):
         'weightcost': 0.0002,
         'initialmomentum': 0.5,
         'finalmomentum': 0.9,
-        'maxepoch': 10
+        'maxepoch': 1
     }
     model, batchdata = RBM(batchdata, 2, params)
     pickle.dump(model, open(model_path + '/layer4.pkl', 'wb'))
+
+    pycuda.autoinit.context.detach()

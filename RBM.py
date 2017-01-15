@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 
 def RBM(batchdata, numhid, params):
@@ -31,7 +32,9 @@ def RBM(batchdata, numhid, params):
     for epoch in range(maxepoch):
         print('Epoch {}'.format(epoch))
         errsum = 0
+        epoch_time = 0
         for batch in range(numbatches):
+            b_start = time.time()
             # Positive phase
             data = batchdata[batch]
             if type == 'sigmoid':
@@ -84,9 +87,14 @@ def RBM(batchdata, numhid, params):
             # if batch % 100 == 0:
             #     display(data.reshape(100, 28,28), negdata.reshape(100, 28,28))
 
+            b_end = time.time()
+            epoch_time += (b_end - b_start)
+
+            # print("Time: {}".format(epoch_time))
+
 
             # end of updates
-        print('Epoch: {}, error: {}'.format(epoch, errsum))
+        print('Epoch:({} seconds) {}, error: {}'.format(epoch_time, epoch, errsum))
 
     print('Model shapes:')
     print(vishid.shape)

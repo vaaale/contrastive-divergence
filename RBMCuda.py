@@ -1,41 +1,51 @@
 import numpy as np
-import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 import time
-import pycuda.driver as drv
-from pycuda.compiler import SourceModule
 from pycuda.elementwise import ElementwiseKernel
-from pycuda.curandom import rand as curand
+from mnist.display import display
 
-culinalg.init()
-functions = SourceModule("""
-#include <math.h>
-  __global__ void sigmoid(float *dest, float *a)
-  {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    dest[idx] =  1 / (1+exp(-1 * a[idx]));
-  }
+f_sigmoid = ElementwiseKernel(
+        "float *dest, float *a",
+        "dest[i] =  1.0 / (1.0 + exp(-1.0 * a[i]))",
+        "f_sigmoid")
 
-  __global__ void stochastic_gt(float *dest, float *a, float *b)
-  {
-    c[i] = a[i] > b b[i] ? 1.0 : 0.0;
-  }
+f_stoch_gt = ElementwiseKernel(
+        "float *dest, float *a, float *b",
+        "dest[i] = (a[i] > b[i] ? 1.0 : 0.0)",
+        "f_sigmoid")
 
-  """)
-f_sigmoid = functions.get_function("sigmoid")
-f_stoch_gt = functions.get_function("stochastic_gt")
+f_scale = ElementwiseKernel(
+        "float *dest, float *a, float b",
+        "dest[i] = a[i] * b",
+        "f_scale")
 
-def sigmoid(a):
-    dim = a.shape
-    dest = np.zeros_like(a)
-    dest_gpu = gpuarray.to_gpu(dest)
-    f_sigmoid(dest_gpu, drv.In(a), block=(1024, 1, 1), grid=(int(dim[0] * dim[1] / 1024) + 1, 1, 1))
+
+def sigmoid(a_gpu):
+    dest_gpu = gpuarray.empty_like(a_gpu)
+    f_sigmoid(dest_gpu, a_gpu)
+    return dest_gpu
+
+
+def scale(a_gpu, alpha):
+    dest_gpu = gpuarray.empty_like(a_gpu)
+    f_scale(dest_gpu, a_gpu, alpha)
+    return dest_gpu
+
+
+def stochastic_gt(a_gpu, numcases, numhid):
+    b_gpu = gpuarray.to_gpu(np.random.rand(numcases, numhid))
+    dest_gpu = gpuarray.empty_like(a_gpu)
+    f_stoch_gt(dest_gpu, a_gpu, b_gpu)
     return dest_gpu
 
 
 def RBM(batchdata, numhid, params):
+
+    # Initialize CUDA
+    culinalg.init()
+
     type = params['type']
     noise = True if 'noise' in params else False
     epsilonw = params['epsilonw']
@@ -53,59 +63,77 @@ def RBM(batchdata, numhid, params):
 
     print('Initializing RBM: {}'.format(numhid))
     # Initializing symmetric weights and biases.
-    vishid = 0.1 * np.random.randn(numdims, numhid)
-    hidbiases = np.zeros((1, numhid))
-    visbiases = np.zeros((1, numdims))
+    vishid = 0.1 * np.random.randn(numdims, numhid).astype(np.float32)
+    hidbiases = np.zeros((1, numhid)).astype(np.float32)
+    visbiases = np.zeros((1, numdims)).astype(np.float32)
+
+    vishidinc = np.zeros((numdims, numhid))
+    hidbiasinc = np.zeros((1, numhid))
+    visbiasinc = np.zeros((1, numdims))
+
+    vishidinc_gpu = gpuarray.to_gpu(vishidinc.astype(np.float32))
+    hidbiasinc_gpu = gpuarray.to_gpu(hidbiasinc.astype(np.float32))
+    visbiasinc_gpu = gpuarray.to_gpu(visbiasinc.astype(np.float32))
 
     vishid_gpu = gpuarray.to_gpu(vishid)
     hidbiases_gpu = gpuarray.to_gpu(hidbiases)
     visbiases_gpu = gpuarray.to_gpu(visbiases)
 
-    # vishidinc = np.zeros((numdims, numhid))
-    # hidbiasinc = np.zeros((1, numhid))
-    # visbiasinc = np.zeros((1, numdims))
     batchposhidprobs = []
 
-    batchdata_gpu = gpuarray.to_gpu(batchdata)
+    batchdata_gpu = gpuarray.to_gpu(np.asarray(batchdata))
 
     for epoch in range(maxepoch):
         print('Epoch {}'.format(epoch))
         errsum = 0
+        epoch_time = 0
         for batch in range(numbatches):
+            b_start = time.time()
             # Positive phase
-            data = batchdata_gpu[batch]
+            data_gpu = batchdata_gpu[batch]
             if type == 'sigmoid':
-                poshidprobs_gpu = sigmoid(cumisc.subtract(culinalg.dot(data, vishid_gpu), hidbiases_gpu))
-                #poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - hidbiases))
+                poshidprobs_gpu = sigmoid(cumisc.subtract(culinalg.dot(data_gpu, vishid_gpu), hidbiases_gpu))
             else:
-                poshidprobs_gpu = cumisc.add(culinalg.dot(data, vishid_gpu), hidbiases)
+                poshidprobs_gpu = cumisc.add(culinalg.dot(data_gpu, vishid_gpu), hidbiases_gpu)
 
-            # if epoch == maxepoch - 1:
-            #     batchposhidprobs.append(poshidprobs)
-            posprods_gpu = culinalg.dot(culinalg.transpose(data), poshidprobs_gpu)
+
+
+            if epoch == maxepoch - 1:
+                poshidprobs = poshidprobs_gpu.get()
+                batchposhidprobs.append(poshidprobs)
+
+            posprods_gpu = culinalg.dot(culinalg.transpose(data_gpu), poshidprobs_gpu)
             poshidact_gpu = cumisc.sum(poshidprobs_gpu, axis=0)
-            posvisact_gpu = cumisc.sum(data, axis=0)
+            posvisact_gpu = cumisc.sum(data_gpu, axis=0)
+
 
             # end of positive phase
 
             if noise:
-                poshidstates = poshidprobs + np.random.normal(size=poshidprobs.shape)
+                #poshidstates = poshidprobs + np.random.normal(size=poshidprobs.shape)
+                poshidstates_gpu = cumisc.add(poshidprobs_gpu, gpuarray.to_gpu(np.random.normal(size=poshidprobs_gpu.shape).astype(np.float32)))
             else:
-                poshidstates = np.asarray(poshidprobs > np.random.rand(numcases, numhid), dtype='float32')
+                poshidstates = np.asarray(poshidprobs_gpu.get() > np.random.rand(numcases, numhid), dtype='float32')
+                #poshidstates_gpu = stochastic_gt(poshidprobs_gpu, numcases, numhid)
+                poshidstates_gpu = gpuarray.to_gpu(poshidstates)
+
 
             # negative phase
-
-            negdata = 1 / (1 + np.exp(-np.dot(poshidstates, vishid.T) - visbiases))
+            # negdata = 1 / (1 + np.exp(-np.dot(poshidstates, vishid.T) - visbiases))
+            negdata_gpu = sigmoid(cumisc.subtract(culinalg.dot(poshidstates_gpu, culinalg.transpose(vishid_gpu)), visbiases_gpu))
             if type == 'sigmoid':
-                neghidprobs = 1 / (1 + np.exp(-np.dot(negdata, vishid) - hidbiases))
+                #neghidprobs = 1 / (1 + np.exp(-np.dot(negdata, vishid) - hidbiases))
+                neghidprobs_gpu = sigmoid(cumisc.subtract(culinalg.dot(negdata_gpu, vishid_gpu), hidbiases_gpu))
             else:
-                neghidprobs = np.dot(negdata, vishid) + hidbiases
+                #neghidprobs = np.dot(negdata, vishid) + hidbiases
+                neghidprobs_gpu = cumisc.add(culinalg.dot(negdata_gpu, vishid_gpu), hidbiases_gpu)
 
-            negprods = np.dot(np.transpose(negdata), neghidprobs)
-            neghidact = np.sum(neghidprobs, axis=0)
-            negvisact = np.sum(negdata, axis=0)
+            negprods_gpu = culinalg.dot(culinalg.transpose(negdata_gpu), neghidprobs_gpu)
+            neghidact_gpu = cumisc.sum(neghidprobs_gpu, axis=0)
+            negvisact_gpu = cumisc.sum(negdata_gpu, axis=0)
+
             # end of negative phase
-            diff = data - negdata
+            diff = data_gpu.get() - negdata_gpu.get()
             err = np.sum(np.square(diff))
             errsum = err + errsum
 
@@ -114,21 +142,50 @@ def RBM(batchdata, numhid, params):
             else:
                 momentum = initialmomentum
 
+
             # update of weights and biases
-            vishidinc = momentum * vishidinc + epsilonw * ((posprods - negprods) / numcases - weightcost * vishid)
-            visbiasinc = momentum * visbiasinc + (epsilonvb / numcases) * (posvisact - negvisact)
-            hidbiasinc = momentum * hidbiasinc + (epsilonhb / numcases) * (poshidact - neghidact)
-            vishid += vishidinc
-            visbiases += visbiasinc
-            hidbiases += hidbiasinc
+
+            # vishidinc = momentum * vishidinc + (epsilonw / numcases) * ((posprods - negprods) - weightcost * vishid)
+
+            vishid_momentum_gpu = scale(vishidinc_gpu, momentum)
+            weightcost_gpu = scale(vishid_gpu, weightcost)
+            statistics_gpu = scale(cumisc.subtract(posprods_gpu, negprods_gpu), (epsilonw/numcases))
+            vishidinc_gpu = cumisc.add(vishid_momentum_gpu, statistics_gpu)
+            vishidinc_gpu = cumisc.subtract(vishidinc_gpu, weightcost_gpu)
+            # np.allclose(vishidinc, vishidinc_gpu.get())
+
+            # visbiasinc = momentum * visbiasinc + (epsilonvb / numcases) * (posvisact - negvisact)
+            visbias_momentum_gpu = scale(visbiasinc_gpu, momentum)
+            visbias_statistics_gpu = cumisc.subtract(posvisact_gpu, negvisact_gpu)
+            visbiasinc_gpu = cumisc.add(visbias_momentum_gpu, scale(visbias_statistics_gpu, (epsilonvb / numcases)))
+            # np.allclose(visbiasinc, visbiasinc_gpu.get())
+
+            # hidbiasinc = momentum * hidbiasinc + (epsilonhb / numcases) * (poshidact - neghidact)
+            hidbias_momentum_gpu = scale(hidbiasinc_gpu, momentum)
+            hidbias_statistics_gpu = cumisc.subtract(poshidact_gpu, neghidact_gpu)
+            hidbiasinc_gpu = cumisc.add(hidbias_momentum_gpu, scale(hidbias_statistics_gpu, (epsilonhb / numcases)))
+            # np.allclose(hidbiasinc, hidbiasinc_gpu.get())
+
+
+            vishid_gpu = cumisc.add(vishid_gpu, vishidinc_gpu)
+            visbiases_gpu = cumisc.add(visbiases_gpu, visbiasinc_gpu)
+            hidbiases_gpu = cumisc.add(hidbiases_gpu, hidbiasinc_gpu)
 
             # if batch % 100 == 0:
-            #     display(data.reshape(100, 28,28), negdata.reshape(100, 28,28))
+            #     negdata = negdata_gpu.get()
+            #     display(data_gpu.get().reshape(100, 28,28), negdata.reshape(100, 28,28))
 
+            b_end = time.time()
+            epoch_time += (b_end - b_start)
+            # print("Time: {}".format(epoch_time))
 
             # end of updates
-        print('Epoch: {}, error: {}'.format(epoch, errsum))
+        print('Epoch:({} seconds) {}, error: {}'.format(epoch_time, epoch, errsum))
 
+
+    vishid = vishid_gpu.get()
+    visbiases = visbiases_gpu.get()
+    hidbiases = hidbiases_gpu.get()
     print('Model shapes:')
     print(vishid.shape)
     print(visbiases.shape)
@@ -138,5 +195,6 @@ def RBM(batchdata, numhid, params):
         'visbiases': visbiases,
         'hidbiases': hidbiases
     }
+
 
     return model, batchposhidprobs

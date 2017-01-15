@@ -1,6 +1,7 @@
 import pickle
 
-from RBM import RBM
+#from RBM import RBM
+from RBMCuda import RBM
 
 
 def pretrain_news20(x_train, model_path):

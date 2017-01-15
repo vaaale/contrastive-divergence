@@ -5,8 +5,8 @@ from keras.engine import Input
 from keras.layers import Dense
 from keras.models import Model
 
+from mnist.dataset import mnist_data
 from mnist.display import display
-from news20.dataset import news20_data
 
 
 def build_mnist_model(numdim):
@@ -63,5 +63,5 @@ def finetune_mnist(x_data, model_path):
 
 
 if __name__ == '__main__':
-    x_train, _ = news20_data()
-    finetune_mnist(x_train, 'mnist/models')
+    x_train, _ = mnist_data()
+    finetune_mnist(x_train, 'models')
