@@ -1,9 +1,11 @@
 import numpy as np
 import pycuda.gpuarray as gpuarray
 import skcuda.linalg as culinalg
-import skcuda.misc as cumisc
 import time
 from pycuda.elementwise import ElementwiseKernel
+import skcuda.misc as cumisc
+import pycuda.driver as cuda
+
 from mnist.display import display
 
 f_sigmoid = ElementwiseKernel(
@@ -44,7 +46,12 @@ def stochastic_gt(a_gpu, numcases, numhid):
 def RBM(batchdata, numhid, params):
 
     # Initialize CUDA
-    culinalg.init()
+    context = cuda.Context.get_current()
+    cuda.init()  # init pycuda driver
+    current_dev = cuda.Device(0)  # device we are working on
+    ctx = current_dev.make_context()  # make a working context
+    ctx.push()  # let context make the lead
+    cumisc.init()
 
     type = params['type']
     noise = True if 'noise' in params else False
@@ -196,5 +203,9 @@ def RBM(batchdata, numhid, params):
         'hidbiases': hidbiases
     }
 
+    ctx.synchronize()
+    ctx.pop()
+    cumisc.shutdown()
+    ctx.detach()
 
     return model, batchposhidprobs
