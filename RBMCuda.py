@@ -4,7 +4,6 @@ import skcuda.linalg as culinalg
 import time
 from pycuda.elementwise import ElementwiseKernel
 import skcuda.misc as cumisc
-import pycuda.driver as cuda
 
 from mnist.display import display
 
@@ -45,13 +44,6 @@ def stochastic_gt(a_gpu, numcases, numhid):
 
 def RBM(batchdata, numhid, params):
 
-    # Initialize CUDA
-    context = cuda.Context.get_current()
-    cuda.init()  # init pycuda driver
-    current_dev = cuda.Device(0)  # device we are working on
-    ctx = current_dev.make_context()  # make a working context
-    ctx.push()  # let context make the lead
-    cumisc.init()
 
     type = params['type']
     noise = True if 'noise' in params else False
@@ -202,10 +194,5 @@ def RBM(batchdata, numhid, params):
         'visbiases': visbiases,
         'hidbiases': hidbiases
     }
-
-    ctx.synchronize()
-    ctx.pop()
-    cumisc.shutdown()
-    ctx.detach()
 
     return model, batchposhidprobs

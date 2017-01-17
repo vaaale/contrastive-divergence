@@ -13,7 +13,7 @@ def mnist_batches(batch_size):
     X_train = X_train.astype('float32')
     X_train /= 255
 
-    batchdata = [X_train[b * batch_size:b * batch_size + batch_size] for b in np.arange(num_batches)]
+    batchdata = [X_train[b * batch_size:b * batch_size + batch_size] for b in np.arange(num_batches, dtype=np.int)]
 
     # display(batchdata[0].reshape(100, 28,28), batchdata[2].reshape(100, 28,28))
 
