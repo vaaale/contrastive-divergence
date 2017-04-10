@@ -154,15 +154,20 @@ def RBM(batchdata, numhid, params):
             # np.allclose(vishidinc, vishidinc_gpu.get())
 
             # visbiasinc = momentum * visbiasinc + (epsilonvb / numcases) * (posvisact - negvisact)
-            visbias_momentum_gpu = scale(visbiasinc_gpu, momentum)
-            visbias_statistics_gpu = cumisc.subtract(posvisact_gpu, negvisact_gpu)
-            visbiasinc_gpu = cumisc.add(visbias_momentum_gpu, scale(visbias_statistics_gpu, (epsilonvb / numcases)))
+            visbiasinc = momentum * visbiasinc_gpu.get() + (epsilonvb / numcases) * (posvisact_gpu.get() - negvisact_gpu.get())
+            visbiasinc_gpu = gpuarray.to_gpu(visbiasinc)
+
+            # visbias_momentum_gpu = scale(visbiasinc_gpu, momentum)
+            # visbias_statistics_gpu = cumisc.subtract(posvisact_gpu, negvisact_gpu)
+            # visbiasinc_gpu = cumisc.add(visbias_momentum_gpu, scale(visbias_statistics_gpu, (epsilonvb / numcases)))
             # np.allclose(visbiasinc, visbiasinc_gpu.get())
 
             # hidbiasinc = momentum * hidbiasinc + (epsilonhb / numcases) * (poshidact - neghidact)
-            hidbias_momentum_gpu = scale(hidbiasinc_gpu, momentum)
-            hidbias_statistics_gpu = cumisc.subtract(poshidact_gpu, neghidact_gpu)
-            hidbiasinc_gpu = cumisc.add(hidbias_momentum_gpu, scale(hidbias_statistics_gpu, (epsilonhb / numcases)))
+            hidbiasinc = momentum * hidbiasinc_gpu.get() + (epsilonhb / numcases) * (poshidact_gpu.get() - neghidact_gpu.get())
+            vishidinc_gpu = gpuarray.to_gpu(hidbiasinc)
+            # hidbias_momentum_gpu = scale(hidbiasinc_gpu, momentum)
+            # hidbias_statistics_gpu = cumisc.subtract(poshidact_gpu, neghidact_gpu)
+            # hidbiasinc_gpu = cumisc.add(hidbias_momentum_gpu, scale(hidbias_statistics_gpu, (epsilonhb / numcases)))
             # np.allclose(hidbiasinc, hidbiasinc_gpu.get())
 
 

@@ -1,20 +1,12 @@
 import pickle
 
-from RBMCuda import RBM
-import skcuda.misc as cumisc
-import pycuda.driver as cuda
+from TfRBM import RBM
 
 
 def pretrain_mnist(x_train, model_path):
-    # Initialize CUDA
-    cuda.init()  # init pycuda driver
-    current_dev = cuda.Device(0)  # device we are working on
-    ctx = current_dev.make_context()  # make a working context
-    ctx.push()  # let context make the lead
-    cumisc.init()
 
     params = {
-        'type': 'sigmoid',
+        'activation': 'sigmoid',
         'epsilonw': 0.1,
         'epsilonvb': 0.1,
         'epsilonhb': 0.1,
@@ -23,7 +15,7 @@ def pretrain_mnist(x_train, model_path):
         'finalmomentum': 0.9,
         'maxepoch': 20
     }
-    model, batchdata = RBM(x_train, 1000, params)
+    model, batchdata = RBM(x_train, len(x_train), 100, 784, 1000, params, None)
     pickle.dump(model, open(model_path + '/layer1.pkl', 'wb'))
 
     model, batchdata = RBM(batchdata, 500, params)
@@ -33,7 +25,7 @@ def pretrain_mnist(x_train, model_path):
     pickle.dump(model, open(model_path + '/layer3.pkl', 'wb'))
 
     params = {
-        'type': 'linear',
+        'activation': 'linear',
         'noise': 'gaussian',
         'epsilonw': 0.001,
         'epsilonvb': 0.001,
@@ -46,9 +38,4 @@ def pretrain_mnist(x_train, model_path):
     model, batchdata = RBM(batchdata, 2, params)
     pickle.dump(model, open(model_path + '/layer4.pkl', 'wb'))
 
-
-    ctx.synchronize()
-    ctx.pop()
-    cumisc.shutdown()
-    ctx.detach()
 
