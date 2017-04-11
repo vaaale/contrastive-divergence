@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 
 from mnist.dataset import mnist_data
@@ -21,10 +22,10 @@ def visualize(data, labels):
 
     display(batch[0:10].reshape(10, 28, 28), reconstructions[0:10].reshape(10, 28, 28))
 
-
+    # print(matplotlib.backend)
     plt.figure()
     plt.jet()
-    plt.scatter(encoded[:,0], encoded[:,1], c=y)
+    plt.scatter(encoded[:,0], encoded[:,1], c=y, s=1)
     plt.show()
 
 

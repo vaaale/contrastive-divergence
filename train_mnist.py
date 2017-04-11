@@ -12,13 +12,13 @@ def train_mnist():
     pretrain_mnist(x_train, 'mnist/models')
     pt_end = time.time()
 
-    # x_train, _ = mnist_data()
-    # ft_start = time.time()
-    # finetune_mnist(x_train, 'mnist/models')
-    # ft_end = time.time()
+    x_train, _ = mnist_data()
+    ft_start = time.time()
+    finetune_mnist(x_train, 'mnist/models')
+    ft_end = time.time()
 
     print('Pretraining: {0}'.format(pt_end-pt_start))
-    # print('Finetuning: {0}'.format(ft_end-ft_start))
+    print('Finetuning: {0}'.format(ft_end-ft_start))
 
 if __name__ == '__main__':
     train_mnist()

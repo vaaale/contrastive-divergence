@@ -1,9 +1,10 @@
-import numpy as np
 import time
 
+import numpy as np
 
-def RBM(batchdata, numhid, params):
-    type = params['type']
+
+def RBM(batch_gen, numbatches, numdims, numhid, params, write_fn, callbacks=[]):
+    type = params['activation']
     noise = True if 'noise' in params else False
     epsilonw = params['epsilonw']
     epsilonvb = params['epsilonvb']
@@ -15,8 +16,7 @@ def RBM(batchdata, numhid, params):
     finalmomentum = params['finalmomentum']
     maxepoch = params['maxepoch']
 
-    numbatches = len(batchdata)
-    numcases, numdims = batchdata[0].shape
+    numcases, numdims = next(batch_gen).shape
 
     print('Initializing RBM: {}'.format(numhid))
     # Initializing symmetric weights and biases.
@@ -27,7 +27,6 @@ def RBM(batchdata, numhid, params):
     vishidinc = np.zeros((numdims, numhid))
     hidbiasinc = np.zeros((1, numhid))
     visbiasinc = np.zeros((1, numdims))
-    batchposhidprobs = []
 
     for epoch in range(maxepoch):
         print('Epoch {}'.format(epoch))
@@ -36,14 +35,14 @@ def RBM(batchdata, numhid, params):
         for batch in range(numbatches):
             b_start = time.time()
             # Positive phase
-            data = batchdata[batch]
+            data = next(batch_gen)
             if type == 'sigmoid':
                 poshidprobs = 1 / (1 + np.exp(-np.dot(data, vishid) - hidbiases))
             else:
                 poshidprobs = np.dot(data, vishid) + hidbiases
 
             if epoch == maxepoch-1:
-                batchposhidprobs.append(poshidprobs)
+                write_fn(poshidprobs)
             posprods = np.dot(np.transpose(data), poshidprobs)
             poshidact = np.sum(poshidprobs, axis=0)
             posvisact = np.sum(data, axis=0)
@@ -84,7 +83,8 @@ def RBM(batchdata, numhid, params):
             visbiases += visbiasinc
             hidbiases += hidbiasinc
 
-            # if batch % 100 == 0:
+            if batch % 100 == 0:
+                print('Batch {} of {} Error {}'.format(batch, numbatches, err))
             #     display(data.reshape(100, 28,28), negdata.reshape(100, 28,28))
 
             b_end = time.time()
@@ -94,6 +94,9 @@ def RBM(batchdata, numhid, params):
 
 
             # end of updates
+        if callbacks:
+            for callback in callbacks:
+                callback(epoch, vishid)
         print('Epoch:({} seconds) {}, error: {}'.format(epoch_time, epoch, errsum))
 
     print('Model shapes:')
@@ -106,4 +109,4 @@ def RBM(batchdata, numhid, params):
         'hidbiases': hidbiases
     }
 
-    return model, batchposhidprobs
+    return model
