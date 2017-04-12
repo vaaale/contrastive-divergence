@@ -18,7 +18,7 @@ def visualize(data, labels):
     # projections = tsne.fit_transform(projections)
 
     plt.figure()
-    plt.scatter(projections[:, 0], projections[:, 1], c=labels)
+    plt.scatter(projections[:, 0], projections[:, 1], c=labels, s=1)
     plt.show()
 
 

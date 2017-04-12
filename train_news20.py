@@ -7,7 +7,6 @@ import time
 
 def train_news20():
     batch_size = 100
-
     x_train = news20_minibatches(batch_size)
     pt_start = time.time()
     pretrain_news20(x_train, 'news20/models')
@@ -26,5 +25,4 @@ def train_news20():
 
 
 if __name__ == '__main__':
-    # train_mnist()
     train_news20()

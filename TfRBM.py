@@ -26,8 +26,8 @@ def RBM(batch_gen, numbatches, numdims, numhid, params, write_fn, callbacks=[]):
     p = tf.placeholder("float", [1], name='Momentum')
 
     vishid = tf.get_variable('W', shape=[numdims, numhid], initializer=tf.contrib.layers.xavier_initializer())
-    visbiases = tf.get_variable('VB', shape=[numdims], initializer=tf.contrib.layers.xavier_initializer())
-    hidbiases = tf.get_variable('HB', shape=[numhid], initializer=tf.contrib.layers.xavier_initializer())
+    visbiases = tf.get_variable('VB', shape=[numdims], initializer=tf.zeros_initializer())
+    hidbiases = tf.get_variable('HB', shape=[numhid], initializer=tf.zeros_initializer())
 
     vishid_inc = tf.get_variable('W_inc', shape=[numdims, numhid], initializer=tf.zeros_initializer())
     visbiases_inc = tf.get_variable('VB_inc', shape=[numdims], initializer=tf.zeros_initializer())
@@ -56,12 +56,17 @@ def RBM(batch_gen, numbatches, numdims, numhid, params, write_fn, callbacks=[]):
     else:
         neghidprobs = neg_logits
 
-    w_positive_grad = tf.matmul(tf.transpose(X), poshidstates)
+    w_positive_grad = tf.matmul(tf.transpose(X), poshidprobs)
     w_negative_grad = tf.matmul(tf.transpose(negdata), neghidprobs)
 
-    vishid_inc = vishid_inc.assign(p * vishid_inc + epsilonw * (w_positive_grad - w_negative_grad) / tf.to_float(tf.shape(X)[0]) - weightcost * vishid)
-    visbiases_inc = visbiases_inc.assign(p * visbiases_inc + epsilonvb * tf.reduce_mean(X - negdata, 0))
-    hidbiases_inc = hidbiases_inc.assign(p * hidbiases_inc + epsilonhb * tf.reduce_mean(poshidstates - neghidprobs, 0))
+    posvisact = tf.reduce_sum(X, axis=0)
+    negvisact = tf.reduce_sum(negdata, axis=0)
+    poshidact = tf.reduce_sum(poshidprobs, axis=0)
+    neghidact = tf.reduce_sum(neghidprobs, axis=0)
+
+    vishid_inc = vishid_inc.assign(p * vishid_inc + epsilonw * ((w_positive_grad - w_negative_grad) / tf.to_float(tf.shape(X)[0]) - weightcost * vishid))
+    visbiases_inc = visbiases_inc.assign(p * visbiases_inc + (epsilonvb / tf.to_float(tf.shape(X)[0])) * (posvisact - negvisact))
+    hidbiases_inc = hidbiases_inc.assign(p * hidbiases_inc + (epsilonhb / tf.to_float(tf.shape(X)[0])) * (poshidact - neghidact))
 
     update_w = vishid.assign(vishid + vishid_inc)
     update_vb = visbiases.assign(visbiases + visbiases_inc)
