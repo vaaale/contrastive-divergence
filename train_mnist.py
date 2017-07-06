@@ -1,6 +1,7 @@
 from mnist.dataset import mnist_batches, mnist_data
 from mnist.finetune import finetune_mnist
-from mnist.pretrain import pretrain_mnist
+# from mnist.pretrain import pretrain_mnist
+from mnist.convpretrain import pretrain_mnist
 import time
 
 
